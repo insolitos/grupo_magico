@@ -112,6 +112,14 @@
   }
   .add-btn:hover { background: #ffaa44; transform: translateY(-50%) scale(1.1); }
 
+  .class-meta { margin-bottom: .65rem; }
+  .class-meta label { display:block; font-size:.75rem; color:var(--muted); margin-bottom:.3rem; }
+  .class-title-input { width:100%; padding:.55rem .7rem; background:var(--surface2); border:1.5px solid var(--border); border-radius:9px; color:var(--text); font:500 .88rem 'DM Sans',sans-serif; outline:none; }
+  .class-title-input:focus { border-color:var(--accent); }
+  .file-input { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+  .import-options { display:flex; gap:.45rem; margin-top:.45rem; align-items:center; }
+  .import-options select { flex:1; min-width:0; padding:.45rem .55rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font:.78rem 'DM Sans',sans-serif; }
+  .import-note { color:var(--muted); font-size:.72rem; line-height:1.45; margin-top:.45rem; }
   .bulk-area {
     width: 100%; min-height: 80px;
     background: var(--surface2); border: 1.5px solid var(--border);
@@ -336,14 +344,22 @@
   }
 
   /* PRINT */
+  .print-heading { display:none; }
+  .site-footer { border-top:1px solid var(--border); padding:1rem 1.5rem; text-align:center; color:var(--muted); font-size:.75rem; letter-spacing:.04em; }
   @media print {
-    body::before, .sidebar, header .logo-icon, .action-bar { display: none !important; }
-    .app { grid-template-columns: 1fr; }
-    .main { max-height: none; overflow: visible; }
-    .group-card { break-inside: avoid; }
-    body { background: white; color: black; }
-    .group-card-body { background: #f8f8f8; }
-    .member-row { background: white; border-color: #ddd; }
+    @page { margin:14mm; }
+    body::before, .sidebar, header .logo-icon, header p, .action-bar, .site-footer, .toast { display:none !important; }
+    header { padding:0 0 8mm; border:0; background:#fff; color:#111; }
+    header h1 { font-size:18pt; } header h1 span { color:#222; }
+    .app { display:block; min-height:0; } .main { padding:0; max-height:none; overflow:visible; background:#fff; }
+    .print-heading { display:flex; justify-content:space-between; margin:0 0 7mm; color:#111; font-size:11pt; }
+    .groups-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6mm; }
+    .group-card { break-inside:avoid; border:1px solid #888 !important; background:#fff !important; animation:none !important; }
+    .group-card-header { background:#f0f0f0 !important; }
+    .group-card-header h3, .group-name-edit, .member-count { color:#111 !important; }
+    .group-name-edit { pointer-events:none; } .group-card-body { background:#fff; }
+    .member-row { background:#fff; border-color:#ddd; color:#111; animation:none; }
+    .member-avatar { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
   }
 
   /* SCROLLBAR */
@@ -433,6 +449,7 @@
     <!-- ALUNOS -->
     <div>
       <div class="section-label">👤 Alunos</div>
+      <div class="class-meta"><label for="classNameInput">Turma ou grupo-turma</label><input id="classNameInput" class="class-title-input" type="text" placeholder="Ex.: 7.º A" maxlength="80"></div>
       <div class="student-input-wrap" style="margin-bottom:.6rem">
         <input type="text" id="nameInput" placeholder="Nome do aluno… (Enter para adicionar)" autocomplete="off">
         <button class="add-btn" onclick="addFromInput()" title="Adicionar">+</button>
@@ -442,12 +459,19 @@
         <span class="count-badge"><span id="studentCount">0</span> alunos</span>
         <div class="btn-row" style="flex:0 0 auto;gap:.4rem">
           <button class="btn" onclick="toggleBulk()" title="Importar lista" style="flex:0 0 auto;padding:.35rem .6rem">📋 Lista</button>
+          <button class="btn" onclick="exportRoster()" title="Descarregar lista em CSV" style="flex:0 0 auto;padding:.35rem .6rem">⬇️</button>
           <button class="btn danger" onclick="clearAll()" style="flex:0 0 auto;padding:.35rem .6rem">🗑️</button>
         </div>
       </div>
       <div id="bulkWrap" style="display:none;margin-top:.6rem">
-        <textarea id="bulkInput" class="bulk-area" placeholder="Cola uma lista de nomes, separados por vírgula, ponto-e-vírgula ou nova linha:&#10;&#10;Ana, Beatriz, Carlos, Diana…"></textarea>
-        <button class="btn primary" onclick="importBulk()" style="margin-top:.4rem;width:100%">Importar</button>
+        <textarea id="bulkInput" class="bulk-area" placeholder="Cola uma lista de nomes ou dados copiados do Excel. Também podes importar um ficheiro CSV, TSV ou TXT.&#10;&#10;Ana&#10;Beatriz&#10;Carlos"></textarea>
+        <div class="import-options">
+          <select id="importMode" aria-label="Modo de importação"><option value="append">Juntar à lista atual</option><option value="replace">Substituir a lista atual</option></select>
+          <label class="btn" for="rosterFile" style="flex:0 0 auto;padding:.45rem .6rem;cursor:pointer">📂 Ficheiro</label>
+          <input id="rosterFile" class="file-input" type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain">
+        </div>
+        <button class="btn primary" onclick="importBulk()" style="margin-top:.45rem;width:100%">Importar lista</button>
+        <div class="import-note">Aceita CSV, TSV, TXT e colagem direta de folhas de cálculo. Os dados ficam guardados neste dispositivo.</div>
       </div>
     </div>
 
@@ -497,11 +521,13 @@
           <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
         </div>
       </div>
+      <div class="print-heading"><strong id="printClassName">Turma</strong><span id="printDate"></span></div>
       <div class="groups-grid" id="groupsGrid"></div>
     </div>
   </main>
 
 </div>
+<footer class="site-footer">TIC, Educação e WEB</footer>
 
 <script>
   // ── STATE ──────────────────────────────────────────────────────────────────
@@ -510,6 +536,7 @@
   let mode = 'byQty'; // 'byQty' | 'bySize'
   let isRandom = true;
   let lastConfig = null;
+  let className = '';
 
   const COLORS = [
     { bg:'#ff890615', border:'#ff8906', text:'#ff8906', dot:'#ff8906' },
@@ -527,11 +554,11 @@
   // ── STUDENTS ───────────────────────────────────────────────────────────────
   function addStudent(name) {
     name = name.trim();
-    if (!name) return;
-    if (students.includes(name)) { toast('⚠️ Já existe: ' + name); return; }
+    if (!name) return false;
+    if (students.some(s => s.toLocaleLowerCase('pt-PT') === name.toLocaleLowerCase('pt-PT'))) return false;
     students.push(name);
-    saveStudents();
-    renderStudentList();
+    if (groups.length) { groups = []; showEmpty(); }
+    saveStudents(); renderStudentList(); return true;
   }
 
   function addFromInput() {
@@ -547,8 +574,10 @@
 
   function removeStudent(name) {
     students = students.filter(s => s !== name);
+    groups = groups.map(g => ({...g, members:g.members.filter(member => member !== name)}));
     saveStudents();
     renderStudentList();
+    if (groups.length) renderGroups(); else showEmpty();
   }
 
   function clearAll() {
@@ -564,14 +593,22 @@
   function renderStudentList() {
     const list = document.getElementById('studentList');
     document.getElementById('studentCount').textContent = students.length;
-    list.innerHTML = students.map(s => `
-      <div class="chip">
-        ${s}
-        <button class="chip-remove" onclick="removeStudent('${s.replace(/'/g,"\\'")}')">×</button>
-      </div>
+    list.innerHTML = students.map((s,i) => `
+      <div class="chip"><span>${escapeHTML(s)}</span><button class="chip-remove" type="button" data-remove-index="${i}" aria-label="Remover ${escapeHTML(s)}">×</button></div>
     `).join('');
     updateGenBtn();
   }
+
+  function escapeHTML(value) { return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+
+  document.getElementById('studentList').addEventListener('click', e => {
+    const button = e.target.closest('[data-remove-index]');
+    if (button) removeStudent(students[Number(button.dataset.removeIndex)]);
+  });
+  document.getElementById('classNameInput').addEventListener('input', e => {
+    className = e.target.value; saveAppState(); updatePrintHeading();
+  });
+  document.getElementById('rosterFile').addEventListener('change', importFile);
 
   function updateGenBtn() {
     document.getElementById('genBtn').disabled = students.length < 2;
@@ -583,13 +620,54 @@
     wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
   }
 
+  function extractNames(raw, fileName = '') {
+    const text = raw.replace(/^\uFEFF/, '').trim();
+    if (!text) return [];
+    const firstLine = text.split(/\r?\n/,1)[0] || '';
+    const delimiter = fileName.toLowerCase().endsWith('.tsv') || firstLine.includes('\t') ? '\t' : (firstLine.split(';').length > firstLine.split(',').length ? ';' : ',');
+    const rows=[]; let row=[], field='', quoted=false;
+    for(let i=0;i<text.length;i++){
+      const ch=text[i];
+      if(ch==='"'&&quoted&&text[i+1]==='"'){field+='"';i++;}
+      else if(ch==='"') quoted=!quoted;
+      else if(!quoted&&(ch===delimiter||ch==='\n'||ch==='\r')){
+        row.push(field.trim());field='';
+        if(ch!==delimiter){if(row.some(Boolean))rows.push(row);row=[];if(ch==='\r'&&text[i+1]==='\n')i++;}
+      } else field+=ch;
+    }
+    row.push(field.trim());if(row.some(Boolean))rows.push(row);
+    const hasHeader=rows.length&&/^(nome|aluno|alunos|name|student|estudante)(\s|$)/i.test((rows[0][0]||'').trim());
+    if(hasHeader)rows.shift();
+    const spreadsheet=/\.(csv|tsv)$/i.test(fileName)||text.includes('\t');
+    return rows.flatMap(r=>spreadsheet?[r.find(v=>v.trim())||'']:r).map(v=>v.trim()).filter(Boolean);
+  }
+
+  function importNames(names) {
+    const choice=document.getElementById('importMode').value;
+    if(choice==='replace'&&students.length&&!confirm('Substituir a lista atual de alunos?'))return;
+    const base=choice==='replace'?[]:[...students];
+    const seen=new Set(base.map(s=>s.toLocaleLowerCase('pt-PT')));let added=0,duplicates=0;
+    for(const rawName of names){const name=rawName.trim();if(!name)continue;const key=name.toLocaleLowerCase('pt-PT');if(seen.has(key)){duplicates++;continue;}seen.add(key);base.push(name);added++;}
+    students=base;groups=[];saveStudents();saveAppState();renderStudentList();if(students.length)showEmpty();
+    document.getElementById('bulkInput').value='';document.getElementById('bulkWrap').style.display='none';
+    toast(`✅ ${added} aluno(s) importado(s)${duplicates?` · ${duplicates} repetido(s) ignorado(s)`:''}`);
+  }
   function importBulk() {
-    const raw = document.getElementById('bulkInput').value;
-    const names = raw.split(/[,;\n]+/).map(n => n.trim()).filter(Boolean);
-    names.forEach(addStudent);
-    document.getElementById('bulkInput').value = '';
-    document.getElementById('bulkWrap').style.display = 'none';
-    toast(`✅ ${names.length} alunos importados`);
+    const names=extractNames(document.getElementById('bulkInput').value);
+    if(!names.length){toast('⚠️ Cola primeiro a lista de alunos.');return;}
+    importNames(names);
+  }
+  async function importFile(event) {
+    const file=event.target.files&&event.target.files[0];if(!file)return;
+    try{const names=extractNames(await file.text(),file.name);if(!names.length)toast('⚠️ Não encontrei nomes nesse ficheiro.');else importNames(names);}
+    catch(error){toast('⚠️ Não foi possível ler o ficheiro.');}
+    event.target.value='';
+  }
+  function exportRoster() {
+    if(!students.length){toast('⚠️ A lista de alunos está vazia.');return;}
+    const csv=['Nome',...students].map(v=>'"'+v.replace(/"/g,'""')+'"').join('\r\n');
+    const blob=new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'}),link=document.createElement('a');
+    link.href=URL.createObjectURL(blob);link.download=(className.trim()||'turma').replace(/[^\p{L}\p{N}._-]+/gu,'_')+'.csv';link.click();URL.revokeObjectURL(link.href);
   }
 
   // ── MODE ───────────────────────────────────────────────────────────────────
@@ -659,6 +737,7 @@
   // ── RENDER GROUPS ──────────────────────────────────────────────────────────
   function renderGroups() {
     document.getElementById('emptyState').style.display = 'none';
+    updatePrintHeading();
     document.getElementById('resultsArea').style.display = 'block';
 
     document.getElementById('resultsTitle').innerHTML =
@@ -670,9 +749,9 @@
            data-group="${gi}">
         <div class="group-card-header" style="background:${g.color.border}22">
           <span style="font-size:1.1rem;margin-right:.3rem">${g.icon}</span>
-          <input class="group-name-edit" value="${g.name}"
-                 oninput="groups[${gi}].name=this.value"
-                 style="color:${g.color.text}"
+          <input class="group-name-edit" value="${escapeHTML(g.name)}"
+                 oninput="groups[${gi}].name=this.value;saveAppState()"
+                 style="color:${g.color.text}" aria-label="Nome do grupo ${gi + 1}"
                  title="Clica para editar o nome">
           <span class="member-count" style="color:${g.color.text}">${g.members.length}</span>
         </div>
@@ -686,12 +765,20 @@
                  ondragstart="dragStart(event,${gi},${mi})"
                  ondragend="dragEnd(event)">
               <div class="member-avatar" style="background:${g.color.border}">${initials(m)}</div>
-              ${m}
+              ${escapeHTML(m)}
             </div>
           `).join('')}
         </div>
       </div>
     `).join('');
+    saveAppState();
+  }
+
+  function updatePrintHeading() {
+    const title=className.trim()||'Turma';
+    const titleEl=document.getElementById('printClassName');if(titleEl)titleEl.textContent=title;
+    const dateEl=document.getElementById('printDate');if(dateEl)dateEl.textContent=new Intl.DateTimeFormat('pt-PT',{dateStyle:'long'}).format(new Date());
+    const header=document.getElementById('resultsTitle');if(header&&groups.length)header.setAttribute('aria-label',groups.length+' grupos · '+title);
   }
 
   function initials(name) {
@@ -764,12 +851,17 @@
   // ── PERSIST ────────────────────────────────────────────────────────────────
   function saveStudents() {
     try { localStorage.setItem('gm_students', JSON.stringify(students)); } catch(e) {}
+    saveAppState();
   }
-  function loadStudents() {
+  function saveAppState() {
+    try { localStorage.setItem('gm_state', JSON.stringify({students,groups,mode,isRandom,lastConfig,className}));localStorage.setItem('gm_className',className); } catch(e) {}
+  }
+  function loadAppState() {
     try {
-      const s = localStorage.getItem('gm_students');
-      if (s) students = JSON.parse(s);
-    } catch(e) {}
+      const saved=localStorage.getItem('gm_state');
+      if(saved){const s=JSON.parse(saved);students=Array.isArray(s.students)?s.students:[];groups=Array.isArray(s.groups)?s.groups:[];mode=s.mode==='bySize'?'bySize':'byQty';isRandom=s.isRandom!==false;lastConfig=s.lastConfig||null;className=s.className||'';}
+      else {const old=localStorage.getItem('gm_students');if(old)students=JSON.parse(old);className=localStorage.getItem('gm_className')||'';}
+    } catch(e){students=[];groups=[];}
   }
 
   // ── SAMPLE DATA ────────────────────────────────────────────────────────────
@@ -789,9 +881,15 @@
   }
 
   // ── INIT ───────────────────────────────────────────────────────────────────
-  loadStudents();
-  renderStudentList();
-  updateGenBtn();
+  loadAppState();
+  document.getElementById('classNameInput').value=className;
+  setMode(mode);
+  document.getElementById('numValue').value=lastConfig?.numVal||3;
+  document.getElementById('shuffleToggle').classList.toggle('on',isRandom);
+  document.getElementById('shuffleLabel').textContent=isRandom?'Sorteio aleatório ativo':'Ordem da lista (sem sorteio)';
+  renderStudentList();updateGenBtn();
+  if(groups.length)renderGroups();
+  updatePrintHeading();
 
   // Show sample data hint if empty
   if (students.length === 0) {
